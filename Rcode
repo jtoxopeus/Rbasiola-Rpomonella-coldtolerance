@@ -1,0 +1,274 @@
+#this R code includes statistical analysis and figure generation
+#for the manuscript:
+#"Conserved cold tolerance of Rhagoletis species from different 
+#host fruits, altitudes in Colorado, USA"
+#by Katelyn Lemay, Mackenzie Moore, Paige Brown, Lahari Gadey, 
+#Gregory J. Ragland, and Jantina Toxopeus
+
+#All data are available as a supplementary Excel file
+#associated with the manuscript itself. This Excel file
+#contains explanations of all abbreviations and variable names.
+#Each worksheet in the Excel file can be saved as its own  
+#.csv or .txt file for use in the R code below.
+
+##############################################################
+##                                                          ##
+##               Supercooling points (SCP)                  ##
+##                                                          ##
+##############################################################
+
+my.data <- read.csv("SCPs.csv")
+str(my.data)
+
+#####ANCOVAs#######
+#checking assumptions of normality
+library(car)
+qqPlot(my.data$SCP)
+hist(my.data$SCP)
+#generally looks normal
+
+#comparing low vs high elevation, R. basiola
+my.data.4 <- subset(my.data, my.data$Species=="R. basiola")
+my.data.4$Population <- as.factor(my.data.4$Population)
+my.model.4 <- glm(SCP ~ Mass + Elevation + Population, data=my.data.4)
+summary(my.model.4)
+
+#Call:
+#glm(formula = SCP ~ Mass + Elevation + Population, data = my.data.4)
+#
+#Deviance Residuals: 
+#  Min       1Q   Median       3Q      Max  
+#-2.3169  -0.7643  -0.0611   0.5836   5.0932  
+#
+#Coefficients: (1 not defined because of singularities)
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)                         -22.63147    0.58966 -38.380   <2e-16 ***
+#Mass                                 -0.14362    0.08672  -1.656    0.104    
+#ElevationLow                          0.74415    0.69865   1.065    0.292    
+#PopulationChatfield                  -0.17229    0.39726  -0.434    0.666    
+#PopulationMountain Research Station        NA         NA      NA       NA    
+#---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+#
+#(Dispersion parameter for gaussian family taken to be 1.316829)
+#
+#Null deviance: 77.246  on 56  degrees of freedom
+#Residual deviance: 69.792  on 53  degrees of freedom
+#AIC: 183.3
+#
+#Number of Fisher Scoring iterations: 2
+
+#comparing crabapple vs. hawthorn, 2019 data
+my.data.3 <- subset(my.data, my.data$Species=="R. pomonella" & my.data$Year=="2019")
+my.model.3 <- lm(SCP ~ Mass + Host.Fruit, data=my.data.3)
+summary(my.model.3)
+
+#Call:
+#  lm(formula = SCP ~ Mass + Host.Fruit, data = my.data.3)
+#
+#Residuals:
+#  Min      1Q  Median      3Q     Max 
+#-1.7930 -0.9223 -0.2234  0.8119  4.2304 
+#
+#Coefficients:
+#               Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)   -20.30161    1.22230 -16.609   <2e-16 ***
+#Mass            0.03569    0.15871   0.225    0.823    
+#Host.FruitHaw   0.44484    0.44892   0.991    0.328    
+#---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+#
+#Residual standard error: 1.331 on 37 degrees of freedom
+#Multiple R-squared:  0.03524,	Adjusted R-squared:  -0.01691 
+#F-statistic: 0.6758 on 2 and 37 DF,  p-value: 0.5149
+
+
+############ R. BASIOLA plot ##########
+#subsetting data
+Low.data <- subset(my.data, my.data$Elevation=="Low" & my.data$Species=="R. basiola") #boxplot
+##UPDATE population names
+BC.data <- subset(Low.data, Low.data$Population=="Boulder Creek") #points
+BC.X <- jitter(rep(1, length(BC.data$SCP)), factor=3) #points
+Chat.data <- subset(Low.data, Low.data$Population=="Chatfield") #points
+Chat.X <- jitter(rep(1, length(Chat.data$SCP)), factor=3) #points
+
+High.data <- subset(my.data, my.data$Elevation=="High") #boxplot and points
+High.X <- jitter(rep(1, length(High.data$SCP)), factor=3) + 1 #points
+
+#boxplot
+par(mfrow=c(1,1), mar=c(4,4,2,2), oma=c(0,0,0,0),las=1, cex=0.75)
+plot(my.data$Mass ~ my.data$Species, type="n",
+     xlim=c(0.5,2.5),ylim=c(-27,-16), 
+     ylab="Supercooling Point (°C)", xlab="Elevation", axes=FALSE)
+axis(side=2, at=c(-16,-18,-20,-22,-24,-26), cex.axis=1,las=1,
+     labels = c(-16,-18,-20,-22,-24,-26), pos=0.5, tck=-0.025)
+lines(c(0.5,0.5),c(0,-27))
+axis(side=1, at=c(1,2), cex.axis=1,las=1,
+     labels = c("Low", "High"), pos=-27, tck=-0.025)
+lines(c(0.5,3.5),c(-27,-27))
+
+boxplot(Low.data$SCP,add=TRUE, at=1, outline=FALSE,
+        boxwex=1,col="white", axes=FALSE,lty=1)
+boxplot(High.data$SCP,add=TRUE, at=2, outline=FALSE,
+        boxwex=1,col="white", axes=FALSE,lty=1)
+
+points(BC.X, BC.data$SCP,  col="#F0E442", pch=16, cex=0.75)
+points(Chat.X, Chat.data$SCP,  col="#D55E00", pch=16, cex=0.75)
+points(High.X, High.data$SCP, col="#56B4E9", pch=16, cex=0.75)
+
+legend(0.75,-16, legend=c("Boulder Cr", "Chatfield", "Mtn Res Stn"),
+       col = c("#F0E442","#D55E00","#56B4E9"), pch=16, pt.cex=0.75,
+       x.intersp = 1, y.intersp = 2)
+
+#export as "SCPs-Rbas.pdf" 3.5" x 3.5"
+
+######### R. POMONELLA plot ##########
+
+Apple.data <- subset(my.data, my.data$Population=="Forest Rd Apple") #boxplot and points
+Apple.X <- jitter(rep(1, length(Apple.data$SCP)), factor=3) #points
+
+Haw.data <-  subset(my.data, my.data$Population=="East High Haw") #boxplot and points
+Haw.X <- jitter(rep(2, length(Haw.data$SCP)), factor=1.5) #points
+
+
+#pretty boxplot
+par(mfrow=c(1,1), mar=c(4,4,2,2), oma=c(0,0,0,0),las=1, cex=0.75)
+plot(my.data$Mass ~ my.data$Species, type="n",
+     xlim=c(0.5,2.5),ylim=c(-23,-14), 
+     ylab="Supercooling Point (°C)", xlab="Host Fruit", axes=FALSE)
+axis(side=2, at=c(-14,-16,-18,-20,-22), cex.axis=1,las=1,
+     labels = c(-14,-16,-18,-20,-22), pos=0.5, tck=-0.025)
+lines(c(0.5,0.5),c(0,-23))
+axis(side=1, at=c(1,2), cex.axis=1,las=1,
+     labels = c("Crabapple", "Hawthorn"), pos=-23, tck=-0.025)
+lines(c(0.5,3.5),c(-23,-23))
+
+boxplot(Apple.data$SCP,add=TRUE, at=1, outline=FALSE,
+        boxwex=1,col="white", axes=FALSE,lty=1)
+boxplot(Haw.data$SCP,add=TRUE, at=2, outline=FALSE,
+        boxwex=1,col="white", axes=FALSE,lty=1)
+
+points(Apple.X, Apple.data$SCP,  col="#117733", pch=16, cex=0.75)
+points(Haw.X, Haw.data$SCP,  col="#661100", pch=16, cex=0.75)
+
+#export as "SCPs-Rpom.pdf" 3.5" x 3.5"
+
+##############################################################
+##                                                          ##
+##               Eclosion time R. pomonella                 ##
+##                                                          ##
+##############################################################
+
+my.data <- read.csv("PostChillEclosion.csv", stringsAsFactors = FALSE)
+str(my.data)
+#make sure Population column is properly named
+colnames(my.data)[1] <-"Population"
+
+#####cumulative eclosion curves#####
+my.data.2 <- my.data[, c(10,2,11)]
+str(my.data.2)
+colnames(my.data.2) <- c("EclosionTime", "Population", "NEclosed")
+
+#ensure all eclosion time data is ordered from shortest to longest within populations
+my.data.2 <- my.data.2[order(my.data.2$Population,my.data.2$EclosionTime),]
+
+##cumulative sum calculations
+#list with cumulative sums for each group
+my.cumulative <- tapply(my.data.2$NEclosed, my.data.2$Population, cumsum)
+my.cumulative 
+#convert list into vector
+cumulativeN <- unlist(my.cumulative)
+head(cumulativeN)
+max(cumulativeN)
+#add vector to data frame
+my.data.2$cumulativeN <- cumulativeN
+head(my.data.2)
+
+##cumulative proportion calculations
+#max value for each Index
+my.max <- tapply(my.data.2$cumulativeN, my.data.2$Population, max)
+my.max
+#number of samples in each Index
+my.lengths <- tapply(my.data.2$cumulativeN, my.data.2$Population, length)
+my.lengths
+#create a vector that is the same length as my.data.2
+#with max value for each Index repeated
+my.max.lengths <- rep(my.max, my.lengths)
+#divide each cumulativeN value by maximum value within that index
+my.proportion <- cumulativeN / my.max.lengths
+#add vector to data frame
+my.data.2$cumulativeP <- my.proportion
+head(my.data.2)
+
+#some quick summary stats
+my.means <- tapply(my.data.2$EclosionTime, my.data.2$Population, mean)
+my.means
+
+my.sd <- tapply(my.data.2$EclosionTime, my.data.2$Population, sd)
+my.N <- tapply(my.data.2$EclosionTime, my.data.2$Population, length)
+my.N
+my.se <- my.sd/sqrt(my.N)
+my.se
+
+#subsetting data by chill time and species
+Apple.CP <- subset(my.data.2, my.data.2$Population=="Congress Park Apple")
+Apple.FR <- subset(my.data.2, my.data.2$Population=="Forest Parkway Apple")
+Haw.FR <- subset(my.data.2, my.data.2$Population=="Forest Parkway Haw")
+Haw.EH <- subset(my.data.2, my.data.2$Population=="East High Haw")
+
+#plot!
+par(mfrow=c(1,1), mar=c(4,4,2,0), oma=c(0,0,0,1),las=1, cex=0.75, mgp=c(2,1,0))
+
+plot(my.data.2$cumulativeP ~ my.data.2$EclosionTime, type="n",
+     xlim=c(0,105), ylim=c(0,1),
+     xlab="Time (d) post-chill", 
+     ylab="Cumulative proportion of adults eclosed", axes=FALSE)
+axis(side=2, at=c(0,0.2,0.4,0.6,0.8,1), cex.axis=1,las=1,
+     labels = c(0,0.2,0.4,0.6,0.8,1), pos=0, tck=-0.025)
+axis(side=1, at=c(0,20,40,60,80,100), cex.axis=1,las=1,
+     labels = c(0,20,40,60,80,100), pos=0, tck=-0.025)
+
+#the x values of 0 and 100 are included to ensure all curves begin and end at the same x value
+lines(c(0,Apple.CP$EclosionTime,100), c(0,Apple.CP$cumulativeP, max(Apple.CP$cumulativeP)),  
+      col="#56B4E9", lwd=2, lty=2)
+lines(c(0,Apple.FR$EclosionTime,100), c(0,Apple.FR$cumulativeP, max(Apple.FR$cumulativeP)),  
+      col="#117733", lwd=2, lty=1)
+lines(c(0,Haw.FR$EclosionTime,100), c(0,Haw.FR$cumulativeP, max(Haw.FR$cumulativeP)),  
+      col="#CC6677", lwd=2, lty=4)
+lines(c(0,Haw.EH$EclosionTime,100), c(0,Haw.EH$cumulativeP,max(Haw.EH$cumulativeP)),  
+      col="#661100", lwd=2, lty=3)
+
+legend(3,1, lty=c(2,1,4,3), lwd=2, seg.len = 3,
+       col=c("#56B4E9", "#117733", "#CC6677", "#661100"), 
+       legend=c("Apple-CP", "Apple-FR", "Haw-FR", "Haw-EH"),
+       bty="n", y.intersp = 1, x.intersp = 1)
+
+#export as "EclosionTimeCumulativeP.pdf" 3.5x3.5"
+
+#### Eclosion time statistical analysis ####
+
+#checking distribution of data using histograms
+hist.data <- my.data[, c(10,2)]
+colnames(hist.data) <- c("EclosionTime", "Population")
+head(hist.data)
+
+library(ggplot2)
+p <- ggplot(hist.data, aes(x=EclosionTime, fill=Population))
+
+p + geom_histogram(binwidth=7, col="black", position="dodge", size=0.25) +
+  facet_wrap(vars(Population), ncol=2,scales="free")
+
+#it is clear from histograms that some populations have a bimodal
+#(or at least non-Gaussian) distribution of eclosion times
+
+#####KS tests#####
+
+#using subsetted data from cumulative eclosion curves
+ks.test(Apple.CP$EclosionTime, Apple.FR$EclosionTime) #D = 0.46038, p-value = 7.309e-10***
+ks.test(Apple.CP$EclosionTime, Haw.FR$EclosionTime) #D = 0.23822, p-value = 0.01698* -> 0.10188 (after Bonferroni)
+ks.test(Apple.CP$EclosionTime, Haw.EH$EclosionTime) #D = 0.20398, p-value = 0.002012** -> 0.012072 (after Bonferroni)
+ks.test(Apple.FR$EclosionTime, Haw.FR$EclosionTime) #D = 0.59365, p-value = 9.165e-11***
+ks.test(Apple.FR$EclosionTime, Haw.EH$EclosionTime) #D = 0.66436, p-value = < 2.2e-16***
+ks.test(Haw.FR$EclosionTime, Haw.EH$EclosionTime) #D = 0.30835, p-value = 0.0003748*** -> 0.0022488 (after Bonferroni)
+
+#all significant, except Congress Park vs. Forest Rd Haw after Bonferronic correction
